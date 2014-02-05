@@ -3,29 +3,47 @@ using System.Collections;
 
 public class behaviour : MonoBehaviour {
 
+	public string name;
+
 	private Vector3 _TargetPosition;
 	private string _TargetName;
 
-	private const float _LimitDistance = 4f;
-	private const float _FarDistance = 10f;
-	private const float _UpperDistance = 100f;
+	private int _Timer = 0;
+
+	private const float _LimitDistance = 3f;
+	private const float _FarDistance = 6f;
+	private const float _MaxDistance = 100f;
 
 	private const string _NPC1 = "it";
 	private const string _NPC2 = "npc";
 	private const string _NPC3 = "frozen";
 	private const string _NPC4 = "none";
 
+	private bool _Slow;
+	private bool _Fast;
+
 	private Vector3 _Forward = Vector3.zero;
+
+	private const float _MaxVeloctiy = 2;
+
+	private Vector3 _VelocityDirection;
+	private Vector3 _Velocity;
+	private bool _Rotattion = false;
+	private float _CurrentVelocity;
+
 	// Use this for initialization
 	void Start () {
-		_Forward.x = 0.1f;
+		_Forward.x = 0.02f;
+		_CurrentVelocity = 1f;
+		_Slow = true;
+		_Fast = true;
 	}
 	
 	// Update is called once per frame
 	void Update () {
 		Targeting ();
-		Movement ();
-		Wander ();
+		if (this.tag != _NPC3)
+			MoveKinematicSlow ();
 		CheckBorder ();
 	}
 
@@ -42,14 +60,22 @@ public class behaviour : MonoBehaviour {
 
 	#region Targeting
 	void NPC_Targets() {
+		CheckingTargets (_NPC3);
 
-		Vector3 itPosition = _TargetPosition = GameObject.FindGameObjectWithTag (_NPC1).transform.position;
-		_TargetName = _NPC1;
+		Vector3 itPosition = GameObject.FindGameObjectWithTag (_NPC1).transform.position;
 		Vector3 myPosition = this.transform.position;
 
-		if (CheckDistanceFar (GameObject.FindGameObjectWithTag (_NPC1))) {
-			float distance = Vector3.Distance (itPosition, myPosition);
-			CheckingTargets (_NPC3, distance);
+		float distance1 = Vector3.Distance (itPosition, myPosition);
+		float distance2 = 0;
+		if (_TargetPosition.x != 1000)
+				distance2 = Vector3.Distance (_TargetPosition, myPosition);
+		else {
+			_TargetPosition = itPosition;
+			_TargetName = _NPC1;
+		}
+		if (distance1 < distance2) {
+			_TargetPosition = itPosition;
+			_TargetName = _NPC1;
 		}
 	}
 
@@ -57,8 +83,11 @@ public class behaviour : MonoBehaviour {
 		CheckingTargets (_NPC2);
 	}
 
-	void CheckingTargets(string target, float distance = _UpperDistance) {
+	void CheckingTargets(string target, float distance = _MaxDistance) {
 		Vector3 myPosition = this.transform.position;
+		_TargetName = _NPC4;
+		_TargetPosition = Vector3.zero;
+		_TargetPosition.x = 1000;
 		foreach (GameObject obj in GameObject.FindGameObjectsWithTag(target))
 			if (distance > Vector3.Distance (myPosition, obj.transform.position)) {
 				distance = Vector3.Distance (myPosition, obj.transform.position);
@@ -70,12 +99,60 @@ public class behaviour : MonoBehaviour {
 	#endregion
 
 	#region Movements
-	void Movement() {
-		
+	void KinematicAlgorithm() {
+		if (_TargetName == _NPC2 || _TargetName == _NPC3)
+			KinematicArrive ();
+		else if (_TargetName == _NPC1)
+			KinematicFlee ();
 	}
+
+	void MoveKinematicSlow() {
+		KinematicAlgorithm ();
+		float Magnitude = Vector3.Magnitude (_VelocityDirection);
+		if (Magnitude > _FarDistance)
+			Wander ();
+		else {
+			if (Magnitude > _LimitDistance) {
+			}
+			else {
+			
+			}
+		
+			this.transform.Translate(_Velocity * (_MaxVeloctiy ) * Time.deltaTime);
+			IncreaseSpeed();
+		}
+	}
+
+	void IncreaseSpeed() {
+		if (_Timer == 250 && _CurrentVelocity < 2.0f) {
+			_CurrentVelocity += 1f;
+			_Timer = 0;
+		}
+		else
+			_Timer++;
+	}
+
+	void CheckSpeed() {
+		if (_CurrentVelocity <= 2) {
+
+		} 
+		else {
+		}
+	}
+
+	void KinematicArrive() {
+		_VelocityDirection = _TargetPosition - this.transform.position;
+		_Velocity = Vector3.Normalize(_VelocityDirection);
+	}
+
+	void KinematicFlee() {
+		_VelocityDirection = this.transform.position - _TargetPosition;
+		_Velocity = Vector3.Normalize(_VelocityDirection);
+	}
+
 	void Wander() {
-		this.transform.Translate (_Forward);
-		this.transform.Rotate (Vector3.up, Random.value * (-1f * RandomNumber()));
+		this.transform.Translate(_Forward * (_CurrentVelocity / _MaxVeloctiy ));
+		this.transform.Rotate (Vector3.up, Random.value * RandomNumber());
 	}
 
 	#endregion
@@ -102,23 +179,21 @@ public class behaviour : MonoBehaviour {
 	}
 
 	void OnCollisionEnter(Collision c){
+		if (c.gameObject.tag == _NPC1)
+			this.tag = _NPC3;
 
-		if (this.tag == _NPC1) {
-			if (c.gameObject.tag == _NPC2)
-				c.gameObject.tag = _NPC3;
-		}
-		if (this.tag == _NPC2) {
-			if (c.gameObject.tag == _NPC3)
-				c.gameObject.tag = _NPC2;
-		}
+	}
+
+	void CheckLast() {
+
 	}
 
 	int RandomNumber() {
 		float num = Random.value;
-		if (num < 0.5)
-			return 0;
-		else
+		if (num < 0.55)
 			return 1;
+		else
+			return -1;
 	}
 
 
