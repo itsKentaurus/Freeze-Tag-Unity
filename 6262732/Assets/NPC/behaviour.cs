@@ -3,50 +3,119 @@ using System.Collections;
 
 public class behaviour : MonoBehaviour {
 
-	public string name;
-
 	private Vector3 _TargetPosition;
 	private string _TargetName;
 
-	private int _Timer = 0;
+	private float _SmallDistance = 4;
+	private float _BigDistance = 7;
 
-	private const float _LimitDistance = 3f;
-	private const float _FarDistance = 6f;
-	private const float _MaxDistance = 100f;
+	private bool _Slow;
 
 	private const string _NPC1 = "it";
 	private const string _NPC2 = "npc";
 	private const string _NPC3 = "frozen";
 	private const string _NPC4 = "none";
-
-	private bool _Slow;
-	private bool _Fast;
-
+	
 	private Vector3 _Forward = Vector3.zero;
-
-	private const float _MaxVeloctiy = 2;
 
 	private Vector3 _VelocityDirection;
 	private Vector3 _Velocity;
-	private bool _Rotattion = false;
-	private float _CurrentVelocity;
 
-	// Use this for initialization
-	void Start () {
-		_Forward.x = 0.02f;
-		_CurrentVelocity = 1f;
+	private float _CurrentRotation;
+
+	private float NUMBER = 0;
+	private float Timer = 0;
+	private float _Orientation;
+	void Start() {
+		_Orientation = 0;
 		_Slow = true;
-		_Fast = true;
+		_Forward.z = Mathf.Sin(_Orientation);
+		_Forward.x = Mathf.Cos(_Orientation);
 	}
-	
-	// Update is called once per frame
-	void Update () {
+
+	void Update() {
 		Targeting ();
-		if (this.tag != _NPC3)
-			MoveKinematicSlow ();
+		KinamaticAlgorithm ();
+		if (Timer == 90) {
+				print (90);
+			Timer = 0;
+		}
+//		Timer++;
+		transform.Rotate (Vector3.up, 1);
 		CheckBorder ();
 	}
 
+	void KinamaticAlgorithm() {
+		float Distance = Vector3.Distance (_TargetPosition, this.transform.position);
+		Vector3 Hipothenuse = _TargetPosition - this.transform.position;
+
+		float RotationNeeded = Mathf.Acos(Vector3.Dot(Hipothenuse, _Forward));
+
+		if ( _CurrentRotation == 0)
+			_CurrentRotation = RotationNeeded / 100f;
+
+		if (_TargetName == _NPC2 || _TargetName == _NPC3)
+			KinematicArrive (_CurrentRotation, RotationNeeded);
+		else if (_TargetName == _NPC1)
+			KinematicFlee (_CurrentRotation, RotationNeeded);
+		else {
+			_TargetPosition = Vector3.zero;
+			_TargetName = _NPC4;
+		}
+		if (_TargetName != _NPC4) {
+			UpdateForward ();
+			this.transform.Translate (_Forward);
+		}
+	}
+	void KinematicArrive(float Distance, float RotationNeeded) {
+
+		_VelocityDirection = _TargetPosition - this.transform.position;
+		_Velocity = Vector3.Normalize(_VelocityDirection);
+
+		float Rotate = Mathf.Acos(Vector3.Dot (_Velocity, _Forward) / Vector3.Magnitude(_Forward));
+
+		if (Distance < _SmallDistance) {
+			_Orientation += Rotate ;
+		} else if (Distance < _BigDistance) {
+		}
+		else Wander ();
+	}
+	void KinematicFlee(float Distance, float Number) {
+		_VelocityDirection = this.transform.position - _TargetPosition;
+		_Velocity = Vector3.Normalize(_VelocityDirection);
+
+		if (_Slow) {
+			if (Distance < _SmallDistance) {
+			} else if (Distance < _BigDistance) {
+			}
+			else Wander ();
+		} else {
+			if (Distance < _SmallDistance) {
+
+			} else if (Distance < _BigDistance) {
+			}
+			else Wander ();
+		}
+	}
+
+	void Wander() {
+		float Rotate = Random.value * 2 * RandomNumber ();
+		_Orientation += Rotate;
+		UpdateForward ();
+		this.transform.Rotate (Vector3.up, _Orientation);
+
+	}
+
+	void UpdateForward() {
+		if (_Orientation > 360)
+			_Orientation -= 360;
+		if (_Orientation < 0)
+			_Orientation += 360;
+		float Temp = _Orientation % (Mathf.PI * 2);
+		_Forward.z = Mathf.Sin(Temp );
+		_Forward.x = Mathf.Cos(Temp );
+		_Forward /= 8f;
+	}
 	void Targeting() {
 		if (this.tag == _NPC1)
 			IT_Targets ();
@@ -58,17 +127,16 @@ public class behaviour : MonoBehaviour {
 		}
 	}
 
-	#region Targeting
 	void NPC_Targets() {
 		CheckingTargets (_NPC3);
-
+		
 		Vector3 itPosition = GameObject.FindGameObjectWithTag (_NPC1).transform.position;
 		Vector3 myPosition = this.transform.position;
-
+		
 		float distance1 = Vector3.Distance (itPosition, myPosition);
 		float distance2 = 0;
 		if (_TargetPosition.x != 1000)
-				distance2 = Vector3.Distance (_TargetPosition, myPosition);
+			distance2 = Vector3.Distance (_TargetPosition, myPosition);
 		else {
 			_TargetPosition = itPosition;
 			_TargetName = _NPC1;
@@ -78,89 +146,24 @@ public class behaviour : MonoBehaviour {
 			_TargetName = _NPC1;
 		}
 	}
-
+	
 	void IT_Targets() {
 		CheckingTargets (_NPC2);
 	}
-
-	void CheckingTargets(string target, float distance = _MaxDistance) {
+	
+	void CheckingTargets(string target) {
+		float distance = 100f;
 		Vector3 myPosition = this.transform.position;
 		_TargetName = _NPC4;
 		_TargetPosition = Vector3.zero;
 		_TargetPosition.x = 1000;
 		foreach (GameObject obj in GameObject.FindGameObjectsWithTag(target))
-			if (distance > Vector3.Distance (myPosition, obj.transform.position)) {
-				distance = Vector3.Distance (myPosition, obj.transform.position);
-				_TargetPosition = obj.transform.position;
-				_TargetName = _NPC3;
-			}
-	}
-
-	#endregion
-
-	#region Movements
-	void KinematicAlgorithm() {
-		if (_TargetName == _NPC2 || _TargetName == _NPC3)
-			KinematicArrive ();
-		else if (_TargetName == _NPC1)
-			KinematicFlee ();
-	}
-
-	void MoveKinematicSlow() {
-		KinematicAlgorithm ();
-		float Magnitude = Vector3.Magnitude (_VelocityDirection);
-		if (Magnitude > _FarDistance)
-			Wander ();
-		else {
-			if (Magnitude > _LimitDistance) {
-			}
-			else {
-			
-			}
-		
-			this.transform.Translate(_Velocity * (_MaxVeloctiy ) * Time.deltaTime);
-			IncreaseSpeed();
+		if (distance > Vector3.Distance (myPosition, obj.transform.position)) {
+			distance = Vector3.Distance (myPosition, obj.transform.position);
+			_TargetPosition = obj.transform.position;
+			_TargetName = _NPC3;
 		}
 	}
-
-	void IncreaseSpeed() {
-		if (_Timer == 250 && _CurrentVelocity < 2.0f) {
-			_CurrentVelocity += 1f;
-			_Timer = 0;
-		}
-		else
-			_Timer++;
-	}
-
-	void CheckSpeed() {
-		if (_CurrentVelocity <= 2) {
-
-		} 
-		else {
-		}
-	}
-
-	void KinematicArrive() {
-		_VelocityDirection = _TargetPosition - this.transform.position;
-		_Velocity = Vector3.Normalize(_VelocityDirection);
-	}
-
-	void KinematicFlee() {
-		_VelocityDirection = this.transform.position - _TargetPosition;
-		_Velocity = Vector3.Normalize(_VelocityDirection);
-	}
-
-	void Wander() {
-		this.transform.Translate(_Forward * (_CurrentVelocity / _MaxVeloctiy ));
-		this.transform.Rotate (Vector3.up, Random.value * RandomNumber());
-	}
-
-	#endregion
-
-	bool CheckDistanceFar(GameObject o) {
-		return (Vector3.Distance (o.transform.position, this.transform.position) > _LimitDistance);
-	}
-
 	void CheckBorder() {
 		Vector3 position = this.transform.position;
 		Vector3 movement = Vector3.zero;
@@ -169,23 +172,13 @@ public class behaviour : MonoBehaviour {
 			this.transform.position = position - movement;
 		else if (position.z <= -10)
 			this.transform.position = position + movement;
-
+		
 		movement.z = 0;
 		movement.x = 20;
 		if (position.x >= 10)
 			this.transform.position = position - movement;
 		else if (position.x <= -10)
 			this.transform.position = position + movement;
-	}
-
-	void OnCollisionEnter(Collision c){
-		if (c.gameObject.tag == _NPC1)
-			this.tag = _NPC3;
-
-	}
-
-	void CheckLast() {
-
 	}
 
 	int RandomNumber() {
@@ -196,5 +189,8 @@ public class behaviour : MonoBehaviour {
 			return -1;
 	}
 
-
+	void OnCollisionEnter(Collision c){
+		if (c.gameObject.tag == _NPC1)
+			this.tag = _NPC3;
+	}
 }
