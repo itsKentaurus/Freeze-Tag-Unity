@@ -1,8 +1,10 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
   <MonoDevelop.Ide.Workbench ActiveDocument="Assets\NPC\behaviour.cs">
     <Files>
-      <File FileName="Assets\NPC\behaviour.cs" Line="37" Column="16" />
+      <File FileName="Assets\NPC\behaviour.cs" Line="79" Column="44" />
+      <File FileName="Assets\NPC\FSM.cs" Line="10" Column="8" />
+      <File FileName="Assets\Selector.cs" Line="9" Column="11" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
