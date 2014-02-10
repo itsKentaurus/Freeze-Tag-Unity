@@ -26,8 +26,8 @@ public class behaviour : FSM {
 	private bool _Kinematic;
 	private int _ButtonTimer;
 	protected override void Initialize() {
-		_Kinematic = true;
-		_SeekVelocity = Vector3.right;
+		_Kinematic = false;
+		_SeekVelocity = Vector3.right * 1.5f;
 		_CurrentState = FSMState.Arrive;
 		_CurrenSpeed = _MaxSpeed;
 		_CurrentRotSpeed = 1.5f;
@@ -70,18 +70,19 @@ public class behaviour : FSM {
 	protected void UpdateBounds() {
 		Vector3 position = this.transform.position;
 		Vector3 movement = Vector3.zero;
-		movement.z = 20;
+		movement.x = position.x;
+		movement.z = 10;
 		if (position.z >= 10)
-			this.transform.position = position - movement;
+			this.transform.position = -movement;
 		else if (position.z <= -10)
-			this.transform.position = position + movement;
+			this.transform.position = movement;
 		
-		movement.z = 0;
-		movement.x = 20;
+		movement.z = position.z;
+		movement.x = 10;
 		if (position.x >= 10)
-			this.transform.position = position - movement;
+			this.transform.position = -movement;
 		else if (position.x <= -10)
-			this.transform.position = position + movement;
+			this.transform.position = movement;
 
 		movement = Vector3.zero;
 
@@ -96,30 +97,40 @@ public class behaviour : FSM {
 		Vector3 perp = Vector3.Cross (transform.forward, Direction);
 		float CurrentRotation = Vector3.Dot(perp, Vector3.up);
 
-		if (_Kinematic)
-			KinematicArrive (Direction, CurrentRotation);
-		else
-			SteeringArrive (Direction, CurrentRotation);
+		if (_Kinematic) {
+			Kinematic (Direction, CurrentRotation);
+			_CurrenSpeed = Mathf.Clamp (_CurrenSpeed, 0, _MaxSpeed);
+			this.transform.Translate (Vector3.forward * Time.deltaTime * _MaxVelocity * 1.75f * _CurrenSpeed);
+		} else {
+			Steering (Direction, CurrentRotation);
+			this.transform.Translate (Time.deltaTime * 1.50f * (_SeekVelocity + Vector3.forward));
+		}
 
 	}
-	protected void SteeringArrive(Vector3 Direction, float CurrentRotation) {
+	protected void Steering(Vector3 Direction, float CurrentRotation) {
 		Vector3 Acceleration = _MaxSpeed * Vector3.Normalize (Direction);
-
 		_CurrenSpeed = Vector3.Magnitude (_SeekVelocity);
-			
-		if (_CurrenSpeed < _MaxSpeed) {
+		float TimeToTarget = 2.5f;
+
+		if (_CurrenSpeed > _MaxSpeed) {
+			Vector3.Normalize(_SeekVelocity);
+			_SeekVelocity = _SeekVelocity * _MaxSpeed;
+		}
+		else if (_CurrenSpeed < _MaxSpeed) {
 			if (distPos <= _LowerLimit) {
 				this.transform.Rotate(Vector3.up, CurrentRotation);
-				_SeekVelocity = _SeekVelocity + Acceleration * (1 / 4);
+				_SeekVelocity = Acceleration - Vector3.forward;
+				_SeekVelocity /= TimeToTarget;
 			}
 			else if (distPos < _UpperLimit){
-				_CurrenSpeed = 0;
 				if (CurrentRotation > 1)
 					this.transform.Rotate(Vector3.up, 1);
 				else if (CurrentRotation < -1)
 					this.transform.Rotate(Vector3.up, -1);
-				else 
-					_SeekVelocity = _SeekVelocity + Acceleration * (1 / 4);
+				else {
+					_SeekVelocity = Acceleration - Vector3.forward;
+					_SeekVelocity /= TimeToTarget;
+				}
 			}
 		} else {
 			if (Vector3.Angle(Direction, transform.forward) <= _FoV) {
@@ -127,103 +138,16 @@ public class behaviour : FSM {
 					this.transform.Rotate(Vector3.up, 1);
 				else if (CurrentRotation < 0)
 					this.transform.Rotate(Vector3.up, -1);
-			} else {
-				_CurrenSpeed = 0f;
-				_SeekVelocity = _SeekVelocity + Acceleration * (1 / 4);
+				_SeekVelocity = Acceleration - Vector3.forward;
+				_SeekVelocity /= TimeToTarget;
 			}
-		}
-
-		this.transform.Translate (Time.deltaTime * 1.50f * (_SeekVelocity + Vector3.forward));
-	}
-	protected void KinematicArrive(Vector3 Direction, float CurrentRotation) {
-		if (_CurrenSpeed < 1.5f) {
-			if (distPos <= _LowerLimit) {
-				this.transform.Rotate(Vector3.up, CurrentRotation);
-				_CurrenSpeed = 3f;
-			}
-			else if (distPos < _UpperLimit){
+			else {
 				_CurrenSpeed = 0;
-				if (CurrentRotation > 1)
-					this.transform.Rotate(Vector3.up, 1);
-				else if (CurrentRotation < -1)
-					this.transform.Rotate(Vector3.up, -1);
-				else 
-					_CurrenSpeed = 3f;
-			}
-		} else {
-			if (Vector3.Angle(Direction, transform.forward) <= _FoV) {
-				if (CurrentRotation > 0)
-					this.transform.Rotate(Vector3.up, 1);
-				else if (CurrentRotation < 0)
-					this.transform.Rotate(Vector3.up, -1);
-			} else {
-				_CurrenSpeed = 0f;
+				_SeekVelocity = Vector3.right * 1.5f;
 			}
 		}
-		_CurrenSpeed = Mathf.Clamp (_CurrenSpeed, 0, _MaxSpeed);
-		this.transform.Translate (Vector3.forward * Time.deltaTime * _MaxVelocity * 1.75f * _CurrenSpeed);
 	}
-
-	protected void UpdateFlee() {
-		Vector3 Direction = this.transform.position - destPos;
-		Vector3 perp = Vector3.Cross (transform.forward, Direction);
-		float CurrentRotation = Vector3.Dot(perp, Vector3.up);
-
-		if (_Kinematic)
-			KinematicFlee (Direction, CurrentRotation);
-		else
-			SteeringFlee (Direction, CurrentRotation);
-
-	}
-	protected void SteeringFlee (Vector3 Direction, float CurrentRotation) {
-		Vector3 Acceleration = _MaxSpeed * Vector3.Normalize (Direction);
-		
-		_CurrenSpeed = Vector3.Magnitude (_SeekVelocity);
-		
-		if (_CurrenSpeed < _MaxSpeed) {
-			if (distPos <= _LowerLimit) {
-				this.transform.Rotate(Vector3.up, CurrentRotation);
-				_SeekVelocity = _SeekVelocity + Acceleration * (1 / 4);
-			}
-			else if (distPos < _UpperLimit){
-				_CurrenSpeed = 0;
-				if (CurrentRotation > 1)
-					this.transform.Rotate(Vector3.up, 1);
-				else if (CurrentRotation < -1)
-					this.transform.Rotate(Vector3.up, -1);
-				else 
-					_SeekVelocity = _SeekVelocity + Acceleration * (1 / 4);
-			}
-		} else {
-			if (Vector3.Angle(Direction, transform.forward) <= _FoV) {
-				if (CurrentRotation > 0)
-					this.transform.Rotate(Vector3.up, 1);
-				else if (CurrentRotation < 0)
-					this.transform.Rotate(Vector3.up, -1);
-			} else {
-				_CurrenSpeed = 0f;
-				_SeekVelocity = _SeekVelocity + Acceleration * (1 / 4);
-			}
-		}
-		
-		this.transform.Translate (Time.deltaTime * (_SeekVelocity + Vector3.forward));
-	}
-	protected void KinematicFlee(Vector3 Direction, float CurrentRotation) {
-		Vector3 yo = -destPos;
-		yo.y = 0.5f;
-		Direction = -Direction;
-		Direction.y = 0.5f;
-//		if (distPos <= _LowerLimit) {
-//			_CurrenSpeed = 3f;
-//		} else if (distPos <= _UpperLimit) {
-//			_CurrenSpeed = 0;
-//			if (CurrentRotation > -1)
-//				this.transform.Rotate(Vector3.up, 1);
-//			else if (CurrentRotation < 1)
-//				this.transform.Rotate(Vector3.up, -1);
-//			else 
-//				_CurrenSpeed = 3f;
-//		}
+	protected void Kinematic(Vector3 Direction, float CurrentRotation) {
 		if (_CurrenSpeed < 3f) {
 			if (distPos <= _LowerLimit) {
 				this.transform.Rotate(Vector3.up, CurrentRotation);
@@ -248,9 +172,21 @@ public class behaviour : FSM {
 				_CurrenSpeed = 0f;
 			}
 		}
-		_CurrenSpeed = Mathf.Clamp (_CurrenSpeed, 0, _MaxSpeed);
-		//		this.transform.Rotate (Vector3.up, 180);
-		this.transform.Translate (Vector3.forward * Time.deltaTime * _MaxVelocity * 1.35f * _CurrenSpeed);
+	}
+
+	protected void UpdateFlee() {
+		Vector3 Direction = this.transform.position - destPos;
+		Vector3 perp = Vector3.Cross (transform.forward, Direction);
+		float CurrentRotation = Vector3.Dot(perp, Vector3.up);
+
+		if (_Kinematic) {
+			Kinematic (Direction, CurrentRotation);
+			this.transform.Translate (Vector3.forward * Time.deltaTime * _MaxVelocity * 1.105f * _CurrenSpeed);
+		} else {
+			Steering (Direction, CurrentRotation);
+			this.transform.Translate (Time.deltaTime * (_SeekVelocity + Vector3.forward));
+		}
+
 	}
 
 	protected void FindTarget(string target) {
@@ -276,6 +212,7 @@ public class behaviour : FSM {
 	}
 
 	protected void UpdateWander() {
+		_CurrenSpeed = 3f;
 		if (Vector3.Distance(transform.position, destPos) <= 2.0f)
 			FindNextPoint();
 
