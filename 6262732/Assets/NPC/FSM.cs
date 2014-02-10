@@ -9,6 +9,7 @@ public class FSM : MonoBehaviour {
 	//Next destination position of NPC 
 	public Vector3 destPos;
 	protected float distPos;
+	public behaviour targetNPC;
 
 	//List of points for patrolling
 	protected GameObject[] pointList;
@@ -18,7 +19,7 @@ public class FSM : MonoBehaviour {
 	
 	// Use this for initialization
 	void Start () 
-	{		
+	{
 		Initialize();
 	}
 	
