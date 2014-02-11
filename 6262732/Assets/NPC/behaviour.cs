@@ -25,8 +25,9 @@ public class behaviour : FSM {
 	private Vector3 _SeekVelocity;
 	private bool _Kinematic;
 	private int _ButtonTimer;
+
 	protected override void Initialize() {
-		_Kinematic = false;
+		_Kinematic = true;
 		_SeekVelocity = Vector3.right * 1.5f;
 		_CurrentState = FSMState.Arrive;
 		_CurrenSpeed = _MaxSpeed;
@@ -39,10 +40,6 @@ public class behaviour : FSM {
 	protected void FindNextPoint()
 	{
 		int rndIndex = Random.Range(0, pointList.Length);
-		float rndRadius = 10.0f;
-		
-		Vector3 rndPosition = Vector3.zero;
-		destPos = pointList[rndIndex].transform.position + rndPosition;
 		destPos = pointList[rndIndex].transform.position;
 	}
 	
@@ -50,7 +47,6 @@ public class behaviour : FSM {
 		if (Input.GetButton ("Switch") && _ButtonTimer >= 100) {
 			_Kinematic = !_Kinematic;
 			_ButtonTimer = 0;
-			print ("SWITCH");
 		} else
 			_ButtonTimer++;
 
